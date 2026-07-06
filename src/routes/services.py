@@ -1,4 +1,4 @@
-from .models import Route
+from .models import Route, RouteStop
 from rest_framework.exceptions import NotFound
 from django.shortcuts import get_object_or_404
 
@@ -22,3 +22,14 @@ def get_route_by_id(route_id):
         raise NotFound("Route not found.")
     
     return route
+
+
+def get_route_stops(route_id):
+    route = Route.objects.filter(id=route_id, is_active=True).first()
+
+    if not route:
+        raise NotFound("Route not found.")
+    
+    stops = RouteStop.objects.filter(route=route).order_by("stop_order")
+
+    return stops

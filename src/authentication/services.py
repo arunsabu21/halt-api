@@ -5,12 +5,14 @@ from django.conf import settings
 from django.core.mail import send_mail
 from rest_framework.exceptions import ValidationError
 from django.db import transaction, IntegrityError
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from decouple import config
 
 from .models import User
+
+from .tasks import send_otp_email_task
 
 LOGIN_ATTEMPT_LIMIT = config("LOGIN_ATTEMPT_LIMIT", cast=int)
 LOGIN_ATTEMPT_TIMEOUT = config("LOGIN_ATTEMPT_TIMEOUT", cast=int)
@@ -20,16 +22,6 @@ FORGOT_TOKEN_TIMEOUT = config("FORGOT_TOKEN_TIMEOUT", cast=int)
 
 def generate_otp(length=6):
     return "".join(secrets.choice(string.digits) for _ in range(length))
-
-
-def send_otp_email(email, otp):
-    send_mail(
-        subject="Your OTP Code",
-        message=f"Your OTP is: {otp}",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
-    )
 
 
 @transaction.atomic()
@@ -84,12 +76,7 @@ def register_user(validated_data):
     otp = generate_otp()
 
     cache.set(f"otp:{email}", otp, timeout=OTP_TIMEOUT)
-
-    try:
-        send_otp_email(email, otp)
-    except Exception:
-        cache.delete(f"otp:{email}")
-        raise ValidationError("Unable to send OTP.")
+    send_otp_email_task.delay(email, otp)
 
     return user
 
@@ -103,7 +90,7 @@ def verify_otp(validated_data):
     if cached_otp is None:
         raise ValidationError("OTP Expired or invalid.")
     
-    if cached_otp != otp:
+    if not secrets.compare_digest(cached_otp, otp):
         raise ValidationError("Invalid OTP.")
     
     user = User.objects.filter(email=email).first()
@@ -133,8 +120,10 @@ def login_user(validated_data):
 
     user = User.objects.filter(email=email).first()
 
-    if not user:
-        raise ValidationError("User doesn't exist.")
+    if not user or not User.check_password(password):
+        attempts +=1
+        cache.set(f"login_attempt:{email}", attempts, timeout=LOGIN_ATTEMPT_TIMEOUT)
+        raise ValidationError("Invalid email or password.")
 
     if not user.is_verified:
         raise ValidationError("Please verify your email first.")
@@ -142,12 +131,6 @@ def login_user(validated_data):
     if not user.is_active:
         raise ValidationError("Your account has been disabled.")
 
-    if not user.check_password(password):
-
-        attempts += 1
-        cache.set(f"login_attempt:{email}", attempts, timeout=LOGIN_ATTEMPT_TIMEOUT)
-        raise ValidationError("Incorrect password.")
-    
     cache.delete(f"login_attempt:{email}")
     refresh = RefreshToken.for_user(user)
 

@@ -190,8 +190,15 @@ CACHES = {
     }
 }
 
+# Swagger
 SPECTACULAR_SETTINGS = {
     "TITLE": "Bus Booking System",
     "DESCRIPTION": "REST API for bus ticket booking system",
     "VERSION": "1.0.0",
 }
+
+# Broker
+CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"

@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .throttles import RegisterRateThrottle
+from .throttles import RegisterRateThrottle, OTPVerifyRateThrottle, LoginRateThrottle
 from .serializers import (
     RegisterSerializer,
     VerifyOtpSerializer,
@@ -38,6 +38,7 @@ def register(request):
 
 
 @api_view(["POST"])
+@throttle_classes([OTPVerifyRateThrottle])
 @permission_classes([AllowAny])
 def otp_verification(request):
     serializer = VerifyOtpSerializer(data=request.data)
@@ -52,6 +53,7 @@ def otp_verification(request):
 
 
 @api_view(["POST"])
+@throttle_classes([LoginRateThrottle])
 @permission_classes([AllowAny])
 def login(request):
     serializer = LoginSerializer(data=request.data)

@@ -59,7 +59,7 @@ def get_route_stop_details(request, route_id):
     cache_key = route_stops_key(route_id)
     cached_response = get_cache(cache_key)
 
-    if cached_response is None:
+    if cached_response is not None:
         return Response(cached_response, status=status.HTTP_200_OK)
 
     result = get_route_stops(route_id)
@@ -69,7 +69,7 @@ def get_route_stop_details(request, route_id):
         "route_name": result["route_name"],
         "source_city": result["source_city"],
         "destination_city": result["destination_city"],
-        "stops": RouteStopSerializer(result["stops"]).data,
+        "stops": RouteStopSerializer(result["stops"], many=True).data,
     }
 
     set_cache(key=cache_key, value=response_data, timeout=ROUTE_STOPS_CACHE_TIMEOUT)

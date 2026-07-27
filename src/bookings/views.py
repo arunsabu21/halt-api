@@ -15,6 +15,7 @@ from .services import (
     get_bookings,
     get_booking_details,
     initiate_booking,
+    get_booking_by_session_id,
     cancel_booking,
 )
 
@@ -80,3 +81,18 @@ def booking_cancel(request, booking_id):
 @permission_classes([AllowAny])
 def stripe_webhook_view(request):
     return handle_stripe_webhook(request)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def booking_by_session(request):
+    session_id = request.query_params.get("session_id")
+    if not session_id:
+        return Response(
+            {"detail": "session_id is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    booking = get_booking_by_session_id(user=request.user, session_id=session_id)
+    serializer = BookingSerializer(booking)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)

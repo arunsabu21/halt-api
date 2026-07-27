@@ -4,6 +4,7 @@ from .views import (
     booking_details,
     booking_initiate,
     stripe_webhook_view,
+    booking_by_session,
     booking_cancel,
 )
 
@@ -11,6 +12,7 @@ urlpatterns = [
     path("", booking_list, name="booking-list"),
     path("initiate/", booking_initiate, name="booking-initiate"),
     path("webhook/", stripe_webhook_view, name="stripe-webhook"),
+    path("by-session/", booking_by_session, name="booking-by-session"),
     path("<uuid:booking_id>/", booking_details, name="booking-details"),
     path("<uuid:booking_id>/cancel/", booking_cancel, name="booking-cancel"),
 ]

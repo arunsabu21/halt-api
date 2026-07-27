@@ -126,6 +126,15 @@ def initiate_booking(*, user, trip_id, seat_numbers):
     return checkout_session.url
 
 
+def get_booking_by_session_id(user, session_id):
+    try:
+        return Booking.objects.select_related("trip", "trip__route").get(
+            stripe_checkout_session_id=session_id, user=user
+        )
+    except Booking.DoesNotExist:
+        raise NotFound("Booking not found.")
+
+
 @transaction.atomic
 def cancel_booking(*, user, booking_id):
     try:

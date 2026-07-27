@@ -6,6 +6,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from .models import Booking, SeatBooking
 from trips.models import Trip
 from trips.services import _generate_deck_seats
+from .holds import get_held_seats, place_holds, release_holds
+from .stripe_client import create_stripe_checkout_session
 
 
 def get_bookings(user):
@@ -42,13 +44,18 @@ def _get_valid_seat_numbers(bus):
     return set(_generate_deck_seats("S", bus.total_seats, bus.seat_layout))
 
 
-@transaction.atomic
-def create_booking(*, user, trip_id, seat_numbers):
+def generate_booking_reference():
+    while True:
+        reference = f"BK-{uuid.uuid4().hex[:8].upper()}"
+
+        if not Booking.objects.filter(booking_reference=reference).exists():
+            return reference
+
+
+@transaction.atomic()
+def initiate_booking(*, user, trip_id, seat_numbers):
     try:
-        trip = Trip.objects.select_for_update().get(
-            id=trip_id,
-            is_active=True,
-        )
+        trip = Trip.objects.select_for_update().get(id=trip_id, is_active=True)
     except Trip.DoesNotExist:
         raise NotFound("Trip not found.")
 
@@ -64,17 +71,15 @@ def create_booking(*, user, trip_id, seat_numbers):
         raise ValidationError("Duplicate seat numbers in request.")
 
     valid_seats = _get_valid_seat_numbers(trip.bus)
-
-    invalid_seats = [seat for seat in seat_numbers if seat not in valid_seats]
+    invalid_seats = [s for s in seat_numbers if s not in valid_seats]
 
     if invalid_seats:
-        raise ValidationError(f"Invalid seat numbers(s): {','.join(invalid_seats)}")
+        raise ValidationError(f"Invalid seat number(s): {','.join(invalid_seats)}")
 
     booked_seats = set(
-        SeatBooking.objects.filter(
-            trip=trip,
-            seat_number__in=seat_numbers,
-        ).values_list("seat_number", flat=True)
+        SeatBooking.objects.filter(trip=trip, seat_number__in=seat_numbers).values_list(
+            "seat_number", flat=True
+        )
     )
 
     if booked_seats:
@@ -82,8 +87,15 @@ def create_booking(*, user, trip_id, seat_numbers):
             f"Seat(s) already booked: {','.join(sorted(booked_seats))}"
         )
 
+    held_seats = get_held_seats(trip.id, seat_numbers)
+
+    if held_seats:
+        raise ValidationError(
+            f"Seat(s) currently held by another customer: {','.join(sorted(held_seats))}"
+        )
+
     if seat_count > trip.available_seats:
-        raise ValidationError("Not enough seats available.")
+        raise ValidationError("Not enough seats available")
 
     total_amount = Decimal(seat_count) * trip.fare
 
@@ -92,33 +104,26 @@ def create_booking(*, user, trip_id, seat_numbers):
         user=user,
         trip=trip,
         seat_count=seat_count,
+        seat_numbers=seat_numbers,
         total_amount=total_amount,
-        status=Booking.Status.CONFIRMED,
+        status=Booking.Status.PENDING,
     )
 
-    SeatBooking.objects.bulk_create(
-        [
-            SeatBooking(
-                booking=booking,
-                trip=trip,
-                seat_number=seat_number,
-            )
-            for seat_number in seat_numbers
-        ]
-    )
+    if not place_holds(trip.id, seat_numbers, booking.id):
+        booking.delete()
+        raise ValidationError("One or more seats were jus taken, Please try again.")
 
-    trip.available_seats -= seat_count
-    trip.save(update_fields=["available_seats"])
+    try:
+        checkout_session = create_stripe_checkout_session(booking)
+    except Exception:
+        release_holds(trip.id, seat_numbers)
+        booking.delete()
+        raise ValidationError("Could not start payment. Please try again.")
 
-    return booking
+    booking.stripe_checkout_session_id = checkout_session.id
+    booking.save(update_fields=["stripe_checkout_session_id"])
 
-
-def generate_booking_reference():
-    while True:
-        reference = f"BK-{uuid.uuid4().hex[:8].upper()}"
-
-        if not Booking.objects.filter(booking_reference=reference).exists():
-            return reference
+    return checkout_session.url
 
 
 @transaction.atomic

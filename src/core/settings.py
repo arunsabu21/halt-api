@@ -207,3 +207,7 @@ CELERY_TASK_SERIALIZER = "json"
 
 # Frontend URL
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+
+# Stripe
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")

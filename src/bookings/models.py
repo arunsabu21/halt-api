@@ -11,6 +11,7 @@ class Booking(models.Model):
         CONFIRMED = "CONFIRMED", "Confirmed"
         CANCELLED = "CANCELLED", "Cancelled"
         COMPLETED = "COMPLETED", "Completed"
+        EXPIRED = "EXPIRED", "Expired"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking_reference = models.CharField(max_length=20, unique=True)
@@ -25,6 +26,9 @@ class Booking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    seat_numbers = models.JSONField(default=list)
 
     class Meta:
         ordering = ["-created_at"]

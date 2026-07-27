@@ -69,25 +69,11 @@ class BookingSerializer(serializers.ModelSerializer):
         )
 
 
-class BookingCreateSerializer(serializers.Serializer):
+class BookingInitiateSerializer(serializers.Serializer):
     trip = serializers.PrimaryKeyRelatedField(
-        queryset=Trip.objects.filter(
-            is_active=True,
-        )
+        queryset=Trip.objects.filter(is_active=True)
     )
-
     seat_numbers = serializers.ListField(
-        child=serializers.CharField(
-            max_length=10,
-        ),
+        child=serializers.CharField(),
         allow_empty=False,
     )
-
-    def validate_seat_numbers(self, value):
-        seat_numbers = [seat.strip().upper() for seat in value]
-        seat_count = len(seat_numbers)
-
-        if len(seat_numbers) != len(set(seat_numbers)):
-            raise serializers.ValidationError("Duplicate sear numbers are not allowed.")
-
-        return seat_numbers

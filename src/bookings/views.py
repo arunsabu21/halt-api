@@ -1,20 +1,24 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .serializers import (
     BookingListSerializer,
     BookingSerializer,
-    BookingCreateSerializer,
+    BookingInitiateSerializer,
 )
 
 from .services import (
     get_bookings,
     get_booking_details,
-    create_booking,
+    initiate_booking,
     cancel_booking,
 )
+
+from .webhooks import handle_stripe_webhook
 
 
 @api_view(["GET"])
@@ -42,20 +46,18 @@ def booking_details(request, booking_id):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def booking_create(request):
-    serializer = BookingCreateSerializer(data=request.data)
+def booking_initiate(request):
+    serializer = BookingInitiateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    booking = create_booking(
+    checkout_url = initiate_booking(
         user=request.user,
         trip_id=serializer.validated_data["trip"].id,
         seat_numbers=serializer.validated_data["seat_numbers"],
     )
 
-    response_serializer = BookingSerializer(booking)
-
     return Response(
-        response_serializer.data,
+        {"checkout_url": checkout_url},
         status=status.HTTP_201_CREATED,
     )
 
@@ -71,3 +73,10 @@ def booking_cancel(request, booking_id):
         serializer.data,
         status=status.HTTP_200_OK,
     )
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def stripe_webhook_view(request):
+    return handle_stripe_webhook(request)

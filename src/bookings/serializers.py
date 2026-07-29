@@ -69,6 +69,13 @@ class BookingSerializer(serializers.ModelSerializer):
         )
 
 
+class PassengerInputSerializer(serializers.Serializer):
+    seat_number = serializers.CharField()
+    full_name = serializers.CharField(max_length=100)
+    age = serializers.IntegerField(min_value=1, max_value=120)
+    gender = serializers.ChoiceField(choices=["MALE", "FEMALE"])
+
+
 class BookingInitiateSerializer(serializers.Serializer):
     trip = serializers.PrimaryKeyRelatedField(
         queryset=Trip.objects.filter(is_active=True)
@@ -77,3 +84,6 @@ class BookingInitiateSerializer(serializers.Serializer):
         child=serializers.CharField(),
         allow_empty=False,
     )
+    boarding_point = serializers.CharField()
+    drop_point = serializers.CharField()
+    passengers = PassengerInputSerializer(many=True)

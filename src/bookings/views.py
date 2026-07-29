@@ -55,6 +55,9 @@ def booking_initiate(request):
         user=request.user,
         trip_id=serializer.validated_data["trip"].id,
         seat_numbers=serializer.validated_data["seat_numbers"],
+        boarding_point=serializer.validated_data["boarding_point"],
+        drop_point=serializer.validated_data["drop_point"],
+        passengers=serializer.validated_data["passengers"],
     )
 
     return Response(

@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Booking, SeatBooking
+from .models import Booking, SeatBooking, Passenger
 from .holds import release_holds
 from trips.models import Trip
 
@@ -75,10 +75,16 @@ def _handle_checkout_completed(session):
         _refund_booking(booking)
         return
 
-    SeatBooking.objects.bulk_create(
+    Passenger.objects.bulk_create(
         [
-            SeatBooking(booking=booking, trip=trip, seat_number=seat)
-            for seat in booking.seat_numbers
+            Passenger(
+                booking=booking,
+                seat_number=p["seat_number"],
+                full_name=p["full_name"],
+                age=p["age"],
+                gender=p["gender"],
+            )
+            for p in booking.passengers
         ]
     )
 

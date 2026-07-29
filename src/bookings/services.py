@@ -3,9 +3,10 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
-from .models import Booking, SeatBooking
+from .models import Booking, SeatBooking, Passenger
 from trips.models import Trip
 from trips.services import _generate_deck_seats
+from routes.services import get_route_stops
 from .holds import get_held_seats, place_holds, release_holds
 from .stripe_client import create_stripe_checkout_session
 
@@ -44,6 +45,52 @@ def _get_valid_seat_numbers(bus):
     return set(_generate_deck_seats("S", bus.total_seats, bus.seat_layout))
 
 
+def _get_ordered_stop_names(route):
+    result = get_route_stops(route.id)
+    names = [result["source_city"]]
+    names += [stop.city.name for stop in result["stops"]]
+    names.append(result["destination_city"])
+    return names
+
+
+def _validate_stops(route, boarding_point, drop_point):
+    ordered_names = _get_ordered_stop_names(route)
+
+    if boarding_point not in ordered_names:
+        raise ValidationError("Invalid boarding point.")
+
+    if drop_point not in ordered_names:
+        raise ValidationError("Invalid drop point.")
+
+    boarding_index = ordered_names.index(boarding_point)
+    drop_index = ordered_names.index(drop_point)
+
+    if drop_index <= boarding_index:
+        raise ValidationError("Drop point must come after the boarding point.")
+
+
+def _validate_passengers(seat_numbers, passengers):
+    if len(passengers) != len(seat_numbers):
+        raise ValidationError("Each selected seat must have exactly passenger.")
+
+    passenger_seats = {p["seat_number"] for p in passengers}
+
+    if passenger_seats != set(seat_numbers):
+        raise ValidationError("Passenger seat numbers must match selected seats.")
+
+    for p in passengers:
+        if not p.get("full_name", "").strip():
+            raise ValidationError("Passenger name is required.")
+
+        age = p.get("age")
+
+        if not isinstance(age, int) or age < 1 or age > 120:
+            raise ValidationError("Passenger age must be between 1 and 120.")
+
+        if p.get("gender") not in ("MALE", "FEMALE"):
+            raise ValidationError("Passenger gender must be MALE or FEMALE.")
+
+
 def generate_booking_reference():
     while True:
         reference = f"BK-{uuid.uuid4().hex[:8].upper()}"
@@ -53,7 +100,7 @@ def generate_booking_reference():
 
 
 @transaction.atomic()
-def initiate_booking(*, user, trip_id, seat_numbers):
+def initiate_booking(*, user, trip_id, seat_numbers, boarding_point, drop_point, passengers):
     try:
         trip = Trip.objects.select_for_update().get(id=trip_id, is_active=True)
     except Trip.DoesNotExist:
@@ -75,6 +122,10 @@ def initiate_booking(*, user, trip_id, seat_numbers):
 
     if invalid_seats:
         raise ValidationError(f"Invalid seat number(s): {','.join(invalid_seats)}")
+
+    _validate_stops(trip.route, boarding_point, drop_point)
+
+    _validate_passengers(seat_numbers, passengers)
 
     booked_seats = set(
         SeatBooking.objects.filter(trip=trip, seat_number__in=seat_numbers).values_list(
@@ -105,6 +156,9 @@ def initiate_booking(*, user, trip_id, seat_numbers):
         trip=trip,
         seat_count=seat_count,
         seat_numbers=seat_numbers,
+        boarding_point=boarding_point,
+        drop_point=drop_point,
+        passengers=passengers,
         total_amount=total_amount,
         status=Booking.Status.PENDING,
     )

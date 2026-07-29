@@ -26,9 +26,14 @@ class Booking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    stripe_checkout_session_id = models.CharField(
+        max_length=255, blank=True, null=True, unique=True
+    )
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
     seat_numbers = models.JSONField(default=list)
+    boarding_point = models.CharField(max_length=150, blank=True)
+    drop_point = models.CharField(max_length=150, blank=True)
+    passengers = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -65,3 +70,33 @@ class SeatBooking(models.Model):
 
     def __str__(self):
         return f"{self.trip} - {self.seat_number}"
+
+
+class Passenger(models.Model):
+    class Gender(models.TextChoices):
+        MALE = "MALE", "Male"
+        FEMALE = "FEMALE", "Female"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.ForeignKey(
+        Booking, on_delete=models.CASCADE, related_name="passenger_details"
+    )
+    seat_number = models.CharField(max_length=10)
+    full_name = models.CharField(max_length=100)
+    age = models.PositiveSmallIntegerField()
+    gender = models.CharField(max_length=10, choices=Gender.choices)
+
+    class Meta:
+        verbose_name = "Passenger"
+        verbose_name_plural = "Passengers"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["booking", "seat_number"],
+                name="unique_booking_seat_passenger",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.full_name} - {self.seat_number} ({self.booking.booking_reference})"
+        )

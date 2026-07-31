@@ -4,6 +4,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework import status
+from .tasks import send_booking_confirmed_email_task
 
 from .models import Booking, SeatBooking, Passenger
 from .holds import release_holds
@@ -98,6 +99,7 @@ def _handle_checkout_completed(session):
     trip.save(update_fields=["available_seats"])
 
     release_holds(trip.id, booking.seat_numbers)
+    send_booking_confirmed_email_task.delay(booking.id)
 
 
 def _handle_checkout_expired(session):

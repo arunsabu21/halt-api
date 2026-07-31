@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+      }
+      body {
+        font-family: "Helvetica", sans-serif;
+        color: #1a1f1c;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid #2d5f4c;
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2d5f4c;
+      }
+      .ticket-ref {
+        text-align: right;
+      }
+      .ticket-ref-label {
+        font-size: 11px;
+        color: #6b7570;
+      }
+      .ticket-ref-value {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .route-block {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+      .route-title {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .route-date {
+        font-size: 13px;
+        color: #6b7570;
+        margin-top: 4px;
+      }
+      .timing {
+        text-align: right;
+      }
+      .timing-time {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .timing-label {
+        font-size: 11px;
+        color: #6b7570;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 24px;
+      }
+      td {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+      td.label {
+        color: #6b7570;
+        width: 40%;
+      }
+      td.value {
+        font-weight: 600;
+        text-align: right;
+      }
+      .seat-highlight {
+        background: #2d5f4c;
+        color: white;
+        padding: 16px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      .seat-highlight-number {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .seat-highlight-label {
+        font-size: 11px;
+        opacity: 0.8;
+      }
+      .footer {
+        font-size: 10px;
+        color: #6b7570;
+        text-align: center;
+        margin-top: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">Halt</div>
+      <div class="ticket-ref">
+        <div class="ticket-ref-label">Booking Reference</div>
+        <div class="ticket-ref-value">{{ booking.booking_reference }}</div>
+      </div>
+    </div>
+
+    <div class="route-block">
+      <div>
+        <div class="route-title">{{ trip.route }}</div>
+        <div class="route-date">{{ travel_date }}</div>
+      </div>
+      <div class="timing">
+        <div class="timing-time">{{ departure_time }}</div>
+        <div class="timing-label">Departure</div>
+      </div>
+    </div>
+
+    <div class="seat-highlight">
+      <div class="seat-highlight-number">{{ passenger.seat_number }}</div>
+      <div class="seat-highlight-label">SEAT NUMBER</div>
+    </div>
+
+    <table>
+      <tr>
+        <td class="label">Passenger Name</td>
+        <td class="value">{{ passenger.full_name }}</td>
+      </tr>
+      <tr>
+        <td class="label">Age / Gender</td>
+        <td class="value">{{ passenger.age }} / {{ passenger.gender }}</td>
+      </tr>
+      <tr>
+        <td class="label">Operator</td>
+        <td class="value">{{ bus.operator }}</td>
+      </tr>
+      <tr>
+        <td class="label">Bus</td>
+        <td class="value">{{ bus.bus_name }} ({{ bus.bus_number }})</td>
+      </tr>
+      <tr>
+        <td class="label">Boarding Point</td>
+        <td class="value">{{ booking.boarding_point }}</td>
+      </tr>
+      <tr>
+        <td class="label">Drop Point</td>
+        <td class="value">{{ booking.drop_point }}</td>
+      </tr>
+      <tr>
+        <td class="label">Fare</td>
+        <td class="value">₹{{ fare }}</td>
+      </tr>
+    </table>
+
+    <div class="footer">
+      This is an electronically generated ticket and does not require a
+      signature.<br />
+      For support, contact {{ support_email }}
+    </div>
+  </body>
+</html>

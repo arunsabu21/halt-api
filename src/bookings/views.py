@@ -3,7 +3,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from django.http import HttpResponse
+from .tickets import generate_ticket_pdf
+from .models import Booking, Passenger
 
 from .serializers import (
     BookingListSerializer,
@@ -99,3 +101,31 @@ def booking_by_session(request):
     serializer = BookingSerializer(booking)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_ticket(request, booking_id, passenger_id):
+    booking = get_booking_details(user=request.user, booking_id=booking_id)
+
+    if booking.status != Booking.Status.CONFIRMED:
+        return Response(
+            {"detail": "Ticket is only available for confirmed bookings."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        passenger = booking.passenger_details.get(id=passenger_id)
+    except Passenger.DoesNotExist:
+        return Response(
+            {"detail": "Passenger not found."}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    pdf_bytes = generate_ticket_pdf(booking, passenger)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="ticket_{booking.booking_reference}_{passenger.seat_number}.pdf"'
+    )
+
+    return response

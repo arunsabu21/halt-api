@@ -2,13 +2,16 @@ import uuid
 from decimal import Decimal
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 from .models import Booking, SeatBooking, Passenger
 from trips.models import Trip
 from trips.services import _generate_deck_seats
 from routes.services import get_route_stops
 from .holds import get_held_seats, place_holds, release_holds
-from .stripe_client import create_stripe_checkout_session
+from .stripe_client import create_stripe_checkout_session, refund_partial_payment
+from .tasks import send_passenger_cancelled_email_task
 
 
 def get_bookings(user):
@@ -189,27 +192,62 @@ def get_booking_by_session_id(user, session_id):
         raise NotFound("Booking not found.")
 
 
-@transaction.atomic
-def cancel_booking(*, user, booking_id):
+def _get_trip_departure_datetime(trip):
+    naive_dt = datetime.combine(trip.travel_date, trip.departure_time)
+    return timezone.make_aware(naive_dt)
+
+
+@transaction.atomic()
+def cancel_passenger(*, user, booking_id, passenger_id):
     try:
-        booking = Booking.objects.select_related("trip").get(id=booking_id, user=user)
+        booking = Booking.objects.select_related("trip").get(
+            id=booking_id, user=user
+        )
     except Booking.DoesNotExist:
         raise NotFound("Booking not found.")
 
-    if booking.status == Booking.Status.CANCELLED:
-        raise ValidationError("Booking is already cancelled.")
+    if booking.status != Booking.Status.CONFIRMED:
+        raise ValidationError("Only confirmed bookings can be cancelled.")
 
-    if booking.trip.status == Trip.Status.COMPLETED:
-        raise ValidationError("Completed trips cannot be cancelled.")
+    try:
+        passenger = booking.passenger_details.get(id=passenger_id)
+    except Passenger.DoesNotExist:
+        raise NotFound("Passenger not found.")
 
-    trip = Trip.objects.select_for_update().get(id=booking.trip.id)
+    if passenger.status == Passenger.Status.CANCELLED:
+        raise ValidationError("This passenger's ticket is already cancelled.")
 
-    trip.available_seats += booking.seat_count
+    departure_dt = _get_trip_departure_datetime(booking.trip)
+
+    if timezone.now() > departure_dt - timedelta(hours=6):
+        raise ValidationError("Cancellation is only allowed up to 6 hours before departure.")
+
+    trip = Trip.objects.select_for_update().get(id=booking.trip_id)
+
+    refund_amount = trip.fare
+
+    refund_partial_payment(
+        payment_intent_id=booking.stripe_payment_intent_id,
+        amount=refund_amount,
+    )
+
+    SeatBooking.objects.filter(trip=trip, seat_number=passenger.seat_number).delete()
+
+    passenger.status = Passenger.Status.CANCELLED
+    passenger.save(update_fields=["status"])
+
+    booking.refunded_amount += refund_amount
+    trip.available_seats += 1
     trip.save(update_fields=["available_seats"])
 
-    booking.status = Booking.Status.CANCELLED
-    booking.save(update_fields=["status"])
+    remaining_active = booking.passenger_details.filter(
+        status=Passenger.Status.ACTIVE
+    ).count()
 
-    SeatBooking.objects.filter(booking=booking).delete()
+    if remaining_active == 0:
+        booking.status = Booking.Status.CANCELLED
 
-    return booking
+    booking.save(update_fields=["refunded_amount", "status"])
+
+    send_passenger_cancelled_email_task.delay(booking.id, passenger.id, str(refund_amount))
+    return passenger

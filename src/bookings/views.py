@@ -18,7 +18,7 @@ from .services import (
     get_booking_details,
     initiate_booking,
     get_booking_by_session_id,
-    cancel_booking,
+    cancel_passenger,
 )
 
 from .webhooks import handle_stripe_webhook
@@ -65,19 +65,6 @@ def booking_initiate(request):
     return Response(
         {"checkout_url": checkout_url},
         status=status.HTTP_201_CREATED,
-    )
-
-
-@api_view(["PATCH"])
-@permission_classes([IsAuthenticated])
-def booking_cancel(request, booking_id):
-    cancel = cancel_booking(user=request.user, booking_id=booking_id)
-
-    serializer = BookingSerializer(cancel)
-
-    return Response(
-        serializer.data,
-        status=status.HTTP_200_OK,
     )
 
 
@@ -129,3 +116,16 @@ def download_ticket(request, booking_id, passenger_id):
     )
 
     return response
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def passenger_cancel(request, booking_id, passenger_id):
+    passenger = cancel_passenger(
+        user=request.user, booking_id=booking_id, passenger_id=passenger_id
+    )
+
+    return Response(
+        {"seat_number": passenger.seat_number, "status": passenger.status},
+        status=status.HTTP_200_OK,
+    )

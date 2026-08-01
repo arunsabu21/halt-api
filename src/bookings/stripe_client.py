@@ -34,3 +34,15 @@ def create_stripe_checkout_session(booking):
     )
 
     return session
+
+
+def refund_partial_payment(*, payment_intent_id, amount):
+    if not payment_intent_id:
+        raise ValueError("No payment intent to refund.")
+
+    amount_in_paise = int(amount * 100)
+
+    return stripe.Refund.create(
+        payment_intent=payment_intent_id,
+        amount=amount_in_paise,
+    )

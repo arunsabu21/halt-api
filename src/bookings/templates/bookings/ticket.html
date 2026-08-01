@@ -103,6 +103,11 @@
     </style>
   </head>
   <body>
+    {% if is_cancelled %}
+    <div style="background: #de1135; color: white; text-align: center; padding: 12px; font-weight: 700; margin-bottom: 16px;">
+      CANCELLED
+    </div>
+    {% endif %}
     <div class="header">
       <div class="logo">Halt</div>
       <div class="ticket-ref">

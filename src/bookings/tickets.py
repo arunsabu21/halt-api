@@ -17,6 +17,7 @@ def generate_ticket_pdf(booking, passenger):
             "departure_time": trip.departure_time.strftime("%I:%M %p"),
             "fare": trip.fare,
             "support_email": bus.operator.support_email,
+            "is_cancelled": passenger.status == passenger.Status.CANCELLED,
         },
     )
 

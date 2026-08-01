@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
-from .models import Booking
+from .models import Booking, Passenger
 from .tickets import generate_ticket_pdf
 
 
@@ -44,22 +44,37 @@ def send_booking_confirmed_email_task(booking_id):
 
 
 @shared_task
-def send_booking_cancelled_email(booking_id):
+def send_passenger_cancelled_email_task(booking_id, passenger_id, refund_amount):
     try:
         booking = Booking.objects.select_related("trip", "trip__route", "user").get(
             id=booking_id
         )
-    except Booking.DoesNotExist:
+        passenger = booking.passenger_details.get(id=passenger_id)
+    except (Booking.DoesNotExist, Passenger.DoesNotExist):
         return
 
-    context = {"booking": booking, "trip": booking.trip}
-    html_content = render_to_string("bookings/emails/booking_cancelled.html", context)
+    context = {
+        "booking": booking,
+        "trip": booking.trip,
+        "passenger": passenger,
+        "refund_amount": refund_amount,
+    }
+    html_content = render_to_string("bookings/emails/passenger_cancelled.html", context)
 
     email = EmailMultiAlternatives(
-        subject=f"Booking Cancelled - {booking.booking_reference}",
-        body=f"Your booking {booking.booking_reference} has been cancelled.",
+        subject=f"Ticket Cancelled - {booking.booking_reference}",
+        body=f"Your ticket for seat {passenger.seat_number} has been cancelled.",
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[booking.user.email],
     )
     email.attach_alternative(html_content, "text/html")
+
+    pdf_bytes = generate_ticket_pdf(booking, passenger)
+
+    email.attach(
+        f"ticket_{booking.booking_reference}_{passenger.seat_number}_cancelled.pdf",
+        pdf_bytes,
+        "application/pdf",
+    )
+
     email.send(fail_silently=False)

@@ -76,6 +76,13 @@ def _handle_checkout_completed(session):
         _refund_booking(booking)
         return
 
+    SeatBooking.objects.bulk_create(
+        [
+            SeatBooking(booking=booking, trip=trip, seat_number=seat)
+            for seat in booking.seat_numbers
+        ]
+    )
+
     Passenger.objects.bulk_create(
         [
             Passenger(

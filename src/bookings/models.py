@@ -21,6 +21,7 @@ class Booking(models.Model):
     trip = models.ForeignKey(Trip, on_delete=models.PROTECT, related_name="bookings")
     seat_count = models.PositiveSmallIntegerField()
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    refunded_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
@@ -73,6 +74,10 @@ class SeatBooking(models.Model):
 
 
 class Passenger(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        CANCELLED = "CANCELLED", "Cancelled"
+
     class Gender(models.TextChoices):
         MALE = "MALE", "Male"
         FEMALE = "FEMALE", "Female"
@@ -85,6 +90,7 @@ class Passenger(models.Model):
     full_name = models.CharField(max_length=100)
     age = models.PositiveSmallIntegerField()
     gender = models.CharField(max_length=10, choices=Gender.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
 
     class Meta:
         verbose_name = "Passenger"

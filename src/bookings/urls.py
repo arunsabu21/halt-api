@@ -6,7 +6,7 @@ from .views import (
     stripe_webhook_view,
     booking_by_session,
     download_ticket,
-    booking_cancel,
+    passenger_cancel,
 )
 
 urlpatterns = [
@@ -19,6 +19,10 @@ urlpatterns = [
         download_ticket,
         name="download-ticket",
     ),
+    path(
+        "<uuid:booking_id>/passengers/<uuid:passenger_id>/cancel/",
+        passenger_cancel,
+        name="passenger-cancel",
+    ),
     path("<uuid:booking_id>/", booking_details, name="booking-details"),
-    path("<uuid:booking_id>/cancel/", booking_cancel, name="booking-cancel"),
 ]

@@ -20,6 +20,7 @@ def get_bookings(user):
             "trip",
             "trip__route",
         )
+        .prefetch_related("passenger_details")
         .filter(user=user)
         .order_by("-created_at")
     )
@@ -27,11 +28,11 @@ def get_bookings(user):
 
 def get_booking_details(user, booking_id):
     try:
-        return Booking.objects.select_related(
-            "trip",
-            "trip__route",
-        ).get(id=booking_id, user=user)
-
+        return (
+            Booking.objects.select_related("trip", "trip__route")
+            .prefetch_related("passenger_details")
+            .get(id=booking_id, user=user)
+        )
     except Booking.DoesNotExist:
         raise NotFound("Booking not found.")
 

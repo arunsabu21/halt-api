@@ -12,8 +12,8 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, and JWT Authenticat
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis)
 ![Celery](https://img.shields.io/badge/Celery-Task%20Queue-37814A?logo=celery&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?logo=stripe&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-SimpleJWT-black)
-
 </div>
 
 ---
@@ -102,6 +102,7 @@ The project follows a clean architecture that separates business logic into **se
 | Cache          | Redis                 |
 | Task Queue     | Celery                |
 | Authentication | SimpleJWT             |
+| Stripe         | Payment               |
 
 ---
 
@@ -257,8 +258,8 @@ API testing can be performed using any of the following tools:
 
 ## Roadmap
 
-- [ ] Payment integration
-- [ ] Ticket generation
+- [x] Payment integration
+- [x] Ticket generation
 - [ ] Notifications
 - [ ] Pagination
 - [ ] Filtering

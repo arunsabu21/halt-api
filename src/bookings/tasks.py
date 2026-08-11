@@ -1,8 +1,7 @@
 from celery import shared_task
-from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
+from core.email.resend import send_mail
 from .models import Booking, Passenger
 from .tickets import generate_ticket_pdf
 
@@ -21,34 +20,28 @@ def send_booking_confirmed_email_task(booking_id):
         "trip": booking.trip,
         "passengers": booking.passenger_details.all(),
     }
-
     html_content = render_to_string("bookings/emails/booking_confirmed.html", context)
 
-    email = EmailMultiAlternatives(
-        subject=f"Booking Confirmed - {booking.booking_reference}",
-        body=f"Your booking {booking.booking_reference} is confirmed.",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[booking.user.email],
-    )
-    email.attach_alternative(html_content, "text/html")
-
-    for passenger in booking.passenger_details.all():
-        pdf_bytes = generate_ticket_pdf(booking, passenger)
-        email.attach(
+    attachments = [
+        (
             f"ticket_{booking.booking_reference}_{passenger.seat_number}.pdf",
-            pdf_bytes,
-            "application/pdf",
+            generate_ticket_pdf(booking, passenger),
         )
+        for passenger in booking.passenger_details.all()
+    ]
 
-    email.send(fail_silently=False)
+    send_mail(
+        to=booking.user.email,
+        subject=f"Booking Confirmed - {booking.booking_reference}",
+        html=html_content,
+        attachments=attachments,
+    )
 
 
 @shared_task
 def send_passenger_cancelled_email_task(booking_id, passenger_id, refund_amount):
     try:
-        booking = Booking.objects.select_related("trip", "trip__route", "user").get(
-            id=booking_id
-        )
+        booking = Booking.objects.select_related("trip", "trip__route", "user").get(id=booking_id)
         passenger = booking.passenger_details.get(id=passenger_id)
     except (Booking.DoesNotExist, Passenger.DoesNotExist):
         return
@@ -61,20 +54,14 @@ def send_passenger_cancelled_email_task(booking_id, passenger_id, refund_amount)
     }
     html_content = render_to_string("bookings/emails/passenger_cancelled.html", context)
 
-    email = EmailMultiAlternatives(
-        subject=f"Ticket Cancelled - {booking.booking_reference}",
-        body=f"Your ticket for seat {passenger.seat_number} has been cancelled.",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[booking.user.email],
-    )
-    email.attach_alternative(html_content, "text/html")
-
     pdf_bytes = generate_ticket_pdf(booking, passenger)
+    attachments = [
+        (f"ticket_{booking.booking_reference}_{passenger.seat_number}_cancelled.pdf", pdf_bytes)
+    ]
 
-    email.attach(
-        f"ticket_{booking.booking_reference}_{passenger.seat_number}_cancelled.pdf",
-        pdf_bytes,
-        "application/pdf",
+    send_mail(
+        to=booking.user.email,
+        subject=f"Ticket Cancelled - {booking.booking_reference}",
+        html=html_content,
+        attachments=attachments,
     )
-
-    email.send(fail_silently=False)

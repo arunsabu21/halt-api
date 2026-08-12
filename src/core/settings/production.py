@@ -3,8 +3,6 @@ from decouple import config, Csv
 
 DEBUG = False
 
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

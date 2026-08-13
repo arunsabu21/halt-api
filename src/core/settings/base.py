@@ -74,6 +74,7 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
+        "OPTIONS": {"sslmode": "require"},
     }
 }
 
@@ -132,6 +133,7 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SOCKET_CONNECTION_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
+            "CONNECTION_POOL_KWARGS": {"ssl_cert_reqs": None},
         },
         "KEY_PREFIX": "booking_system",
         "TIMEOUT": 300,
@@ -148,6 +150,11 @@ CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
+
+CELERY_BROKER_USE_SSL = (
+    {"ssl_cert_reqs": None} if config("REDIS_URL", default="").startswith("rediss://") else None
+)
+CELERY_REDIS_BACKEND_USE_SSL = CELERY_BROKER_USE_SSL
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 

@@ -1,0 +1,90 @@
+name: Halt API CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: halt_test
+          POSTGRES_USER: halt_test
+          POSTGRES_PASSWORD: halt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U halt_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      SECRET_KEY: test-secret-key-not-for-production
+      DEBUG: "True"
+      ALLOWED_HOSTS: "127.0.0.1,localhost"
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173"
+      DB_NAME: halt_test
+      DB_USER: halt-test
+      DB_PASSWORD: halt_test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      REDIS_URL: redis://127.0.0.1:6379/1
+      REDIS_HOST: redis://127.0.0.1:6379
+      LOGIN_ATTEMPT_LIMIT: "3"
+      LOGIN_ATTEMPT_TIMEOUT: "300"
+      OTP_TIMEOUT: "300"
+      FORGOT_TOKEN_TIMEOUT: "900"
+      ACCESS_TOKEN_LIFETIME: "30"
+      REFRESH_TOKEN_LIFETIME: "7"
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      RESEND_API_KEY: re_placeholder
+      DEFAULT_FROM_EMAIL: noreply@halt-test.local
+      FRONTEND_URL: http://localhost:5173
+      DJANGO_SETTINGS_MODULE: core.settings.development
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install system dependencies (WeasyPrint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+            libffi-dev libcairo2 shared-mime-info
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        working-directory: src
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        working-directory: src
+        run: python manage.py test

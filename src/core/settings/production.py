@@ -3,6 +3,10 @@ from decouple import config, Csv
 
 DEBUG = False
 
+DATABASES["default"]["options"] = {
+    "sslmode": "require",
+}
+
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

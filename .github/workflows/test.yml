@@ -41,7 +41,7 @@ jobs:
       ALLOWED_HOSTS: "127.0.0.1,localhost"
       CORS_ALLOWED_ORIGINS: "http://localhost:5173"
       DB_NAME: halt_test
-      DB_USER: halt-test
+      DB_USER: halt_test
       DB_PASSWORD: halt_test
       DB_HOST: 127.0.0.1
       DB_PORT: 5432

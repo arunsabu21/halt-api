@@ -132,7 +132,7 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SOCKET_CONNECTION_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
-            "CONNECTION_POOL_KWARGS": {"ssl_cert_reqs": None},
+            "CONNECTION_POOL_KWARGS": {"ssl_cert_reqs": "CERT_NONE"},
         },
         "KEY_PREFIX": "booking_system",
         "TIMEOUT": 300,

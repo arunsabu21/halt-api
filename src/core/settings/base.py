@@ -1,6 +1,7 @@
 from pathlib import Path
 from decouple import config, Csv
 from datetime import timedelta
+import ssl
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -132,7 +133,6 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SOCKET_CONNECTION_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
-            "CONNECTION_POOL_KWARGS": {"ssl_cert_reqs": "CERT_NONE"},
         },
         "KEY_PREFIX": "booking_system",
         "TIMEOUT": 300,
@@ -151,7 +151,7 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
 CELERY_BROKER_USE_SSL = (
-    {"ssl_cert_reqs": None} if config("REDIS_URL", default="").startswith("rediss://") else None
+    {"ssl_cert_reqs": ssl.CERT_REQUIRED} if config("REDIS_URL", default="").startswith("rediss://") else None
 )
 CELERY_REDIS_BACKEND_USE_SSL = CELERY_BROKER_USE_SSL
 

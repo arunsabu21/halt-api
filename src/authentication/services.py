@@ -15,6 +15,11 @@ from .models import User
 
 from .tasks import send_otp_email_task, send_password_reset_email_task
 
+# For production debug
+import logging
+
+logger = logging.getLogger(__name__)
+
 LOGIN_ATTEMPT_LIMIT = config("LOGIN_ATTEMPT_LIMIT", cast=int)
 LOGIN_ATTEMPT_TIMEOUT = config("LOGIN_ATTEMPT_TIMEOUT", cast=int)
 OTP_TIMEOUT = config("OTP_TIMEOUT", cast=int)
@@ -27,68 +32,82 @@ def generate_otp(length=6):
 
 @transaction.atomic()
 def register_user(validated_data):
-    email = validated_data["email"]
-    full_name = validated_data["full_name"]
-    phone_number = validated_data["phone_number"]
-    password = validated_data["password"]
+    try:
+        email = validated_data["email"]
+        full_name = validated_data["full_name"]
+        phone_number = validated_data["phone_number"]
+        password = validated_data["password"]
 
-    user = (
-        User.objects.select_for_update()
-        .only(
-            "id",
-            "email",
-            "is_verified",
-            "phone_number",
-        )
-        .filter(email=email)
-        .first()
-    )
+        logger.info("REGISTER: checking user")
 
-    phone_taken = (
-        User.objects.filter(phone_number=phone_number).exclude(email=email).exists()
-    )
-
-    if phone_taken:
-        raise ValidationError(
-            "An account may already exist with the provided information."
-        )
-
-    if user:
-        if user.is_verified:
-            raise ValidationError(
-                "An account may already exists with the provided information."
-            )
-
-        user.full_name = full_name
-        user.phone_number = phone_number
-        user.set_password(password)
-
-        user.save(
-            update_fields=[
-                "full_name",
+        user = (
+            User.objects.select_for_update()
+            .only(
+                "id",
+                "email",
+                "is_verified",
                 "phone_number",
-                "password",
-            ]
+            )
+            .filter(email=email)
+            .first()
         )
 
-    else:
-        try:
-            user = User.objects.create_user(
-                email=email,
-                full_name=full_name,
-                phone_number=phone_number,
-                password=password,
+        logger.info("REGISTER: user check completed")
+
+        phone_taken = (
+            User.objects.filter(phone_number=phone_number).exclude(email=email).exists()
+        )
+
+        if phone_taken:
+            raise ValidationError(
+                "An account may already exist with the provided information."
             )
 
-        except IntegrityError:
-            raise ValidationError("Registration failed. Try again.")
+        if user:
+            if user.is_verified:
+                raise ValidationError(
+                    "An account may already exists with the provided information."
+                )
 
-    otp = generate_otp()
+            user.full_name = full_name
+            user.phone_number = phone_number
+            user.set_password(password)
 
-    cache.set(f"otp:{email}", otp, timeout=OTP_TIMEOUT)
-    send_otp_email_task.delay(email, otp)
+            user.save(
+                update_fields=[
+                    "full_name",
+                    "phone_number",
+                    "password",
+                ]
+            )
 
-    return user
+        else:
+            try:
+                user = User.objects.create_user(
+                    email=email,
+                    full_name=full_name,
+                    phone_number=phone_number,
+                    password=password,
+                )
+
+            except IntegrityError:
+                raise ValidationError("Registration failed. Try again.")
+
+        otp = generate_otp()
+
+        logger.info("REGISTER: storing OTP")
+        cache.set(f"otp:{email}", otp, timeout=OTP_TIMEOUT)
+        logger.info("REGISTER: OTP stored")
+
+        logger.info("REGISTER: dispatching email task")
+        send_otp_email_task.delay(email, otp)
+        logger.info("REGISTER: email task dispatched")
+
+        return user
+
+    except Exception:
+        logger.exception("REGISTER USER FAILED")
+        raise
 
 
 def verify_otp(validated_data):

@@ -38,7 +38,7 @@ def register_user(validated_data):
         phone_number = validated_data["phone_number"]
         password = validated_data["password"]
 
-        logger.info("REGISTER: checking user")
+        logger.warning("REGISTER: checking user")
 
         user = (
             User.objects.select_for_update()
@@ -52,7 +52,7 @@ def register_user(validated_data):
             .first()
         )
 
-        logger.info("REGISTER: user check completed")
+        logger.warning("REGISTER: user check completed")
 
         phone_taken = (
             User.objects.filter(phone_number=phone_number).exclude(email=email).exists()
@@ -95,13 +95,13 @@ def register_user(validated_data):
 
         otp = generate_otp()
 
-        logger.info("REGISTER: storing OTP")
+        logger.warning("REGISTER: storing OTP")
         cache.set(f"otp:{email}", otp, timeout=OTP_TIMEOUT)
         logger.info("REGISTER: OTP stored")
 
-        logger.info("REGISTER: dispatching email task")
+        logger.warning("REGISTER: dispatching email task")
         send_otp_email_task.delay(email, otp)
-        logger.info("REGISTER: email task dispatched")
+        logger.warning("REGISTER: email task dispatched")
 
         return user
 

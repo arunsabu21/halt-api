@@ -32,14 +32,11 @@ def generate_otp(length=6):
 
 @transaction.atomic()
 def register_user(validated_data):
-    print("REGISTER: function reached", flush=True)
     try:
         email = validated_data["email"]
         full_name = validated_data["full_name"]
         phone_number = validated_data["phone_number"]
         password = validated_data["password"]
-
-        logger.warning("REGISTER: checking user")
 
         user = (
             User.objects.select_for_update()
@@ -53,10 +50,10 @@ def register_user(validated_data):
             .first()
         )
 
-        logger.warning("REGISTER: user check completed")
-
         phone_taken = (
-            User.objects.filter(phone_number=phone_number).exclude(email=email).exists()
+            User.objects.filter(phone_number=phone_number)
+            .exclude(email=email)
+            .exists()
         )
 
         if phone_taken:
@@ -96,13 +93,8 @@ def register_user(validated_data):
 
         otp = generate_otp()
 
-        logger.warning("REGISTER: storing OTP")
         cache.set(f"otp:{email}", otp, timeout=OTP_TIMEOUT)
-        logger.info("REGISTER: OTP stored")
-
-        logger.warning("REGISTER: dispatching email task")
         send_otp_email_task.delay(email, otp)
-        logger.warning("REGISTER: email task dispatched")
 
         return user
 

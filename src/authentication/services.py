@@ -32,6 +32,7 @@ def generate_otp(length=6):
 
 @transaction.atomic()
 def register_user(validated_data):
+    print("REGISTER: function reached", flush=True)
     try:
         email = validated_data["email"]
         full_name = validated_data["full_name"]

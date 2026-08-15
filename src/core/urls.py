@@ -17,8 +17,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from django.http import JsonResponse
+
+def api_status(request):
+    return JsonResponse({
+        "status": "ok",
+        "service": "Halt API",
+        "version": "v1",
+        "docs": "/api/docs/",
+    })
 
 urlpatterns = [
+    path("", api_status),
     path('admin/', admin.site.urls),
 
     path("api/v1/", include([

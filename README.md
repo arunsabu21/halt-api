@@ -4,7 +4,7 @@
 
 **A scalable Bus Booking REST API**
 
-Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Resend, and JWT Authentication.
+Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Resend, JWT Authentication, Docker, GitHub Actions, and Render.
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue?logo=python)
 ![Django](https://img.shields.io/badge/Django-5.x-092E20?logo=django)
@@ -16,6 +16,8 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 ![Resend](https://img.shields.io/badge/Resend-Email-black?logo=resend)
 ![JWT](https://img.shields.io/badge/JWT-SimpleJWT-black)
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=github)
+![Render](https://img.shields.io/badge/Render-Deployed-46E3B7?logo=render)
 
 </div>
 
@@ -24,6 +26,7 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 ## Table of Contents
 
 - [Overview](#overview)
+- [Live Deployment](#live-deployment)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -35,6 +38,7 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 - [Installation](#installation)
 - [Docker](#docker)
 - [Testing](#testing)
+- [CI/CD](#cicd)
 - [Roadmap](#roadmap)
 - [Author](#author)
 
@@ -45,6 +49,22 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 Halt is a scalable Bus Booking REST API built with Django and Django REST Framework.
 
 The project follows a service-oriented architecture that separates business logic into services, serializers, and views for better maintainability, scalability, and testability.
+
+Halt includes authentication, bus and route management, trip search, seat availability, booking workflows, payments, transactional email, Redis caching, Celery background tasks, Docker containerization, CI/CD, and production deployment.
+
+---
+
+## Live Deployment
+
+The API is deployed on **Render** using Gunicorn as the production application server.
+
+### Production API
+
+https://halt-api.onrender.com
+
+### API Documentation
+
+https://halt-api.onrender.com/api/docs/
 
 ---
 
@@ -57,9 +77,11 @@ The project follows a service-oriented architecture that separates business logi
 - JWT authentication
 - Login and logout
 - JWT token blacklisting
-- Forgot password and password reset
+- Forgot password
+- Password reset
 - Login attempt rate limiting
 - Redis-based OTP storage
+- Custom user model
 
 ### Bus Management
 
@@ -69,27 +91,33 @@ The project follows a service-oriented architecture that separates business logi
 - Buses
 - Trips
 - Trip search
+- Trip details
+- Seat availability
 
 ### Booking System
 
-- Seat availability
+- Seat availability validation
 - Seat selection
-- Booking creation and cancellation
+- Booking creation
+- Booking cancellation
 - Booking history
 - Booking reference generation
 - Seat validation
+- Booking status handling
 
 ### Payments
 
 - Stripe Payment Intents
 - Stripe Webhooks
 - Payment status handling
+- Payment integration with booking workflow
 
 ### Email
 
 - Resend email integration
 - OTP verification emails
 - Password reset emails
+- Transactional emails
 - Email attachments
 
 ### Performance
@@ -97,6 +125,7 @@ The project follows a service-oriented architecture that separates business logi
 - Redis-based caching
 - Cached trip search
 - Optimized database queries
+- `select_related()` for related-object optimization
 - Celery background tasks
 
 ### Security
@@ -105,9 +134,10 @@ The project follows a service-oriented architecture that separates business logi
 - Password hashing
 - Django password validators
 - JWT authentication
-- Token blacklisting
+- JWT token blacklisting
 - Environment-based configuration
-- Login rate limiting
+- Login attempt rate limiting
+- Secrets managed through environment variables
 
 ### Production
 
@@ -116,6 +146,9 @@ The project follows a service-oriented architecture that separates business logi
 - Dockerfile
 - `.dockerignore`
 - Entrypoint script
+- PostgreSQL production database
+- Render deployment
+- GitHub Actions CI/CD
 
 ---
 
@@ -134,32 +167,15 @@ The project follows a service-oriented architecture that separates business logi
 | Payments          | Stripe                |
 | Production Server | Gunicorn              |
 | Containerization  | Docker                |
+| CI/CD             | GitHub Actions        |
+| Deployment        | Render                |
 | API Testing       | Bruno / Postman       |
 
 ---
 
 ## Architecture
 
-```text
-Client
-  │
-  ▼
-Views
-  │
-  ▼
-Services
-  │
-  ▼
-Models
-  │
-  ▼
-PostgreSQL
-
-Redis ──► Caching / OTP / Celery
-Celery ──► Background Tasks
-Resend ──► Email
-Stripe ──► Payments
-```
+![Halt API Architecture](./docs/architecture.png)
 
 ---
 
@@ -179,6 +195,7 @@ halt-api/
 │   │   ├── cache/
 │   │   ├── constants/
 │   │   └── settings.py
+│   │
 │   └── manage.py
 │
 ├── docs/
@@ -191,36 +208,58 @@ halt-api/
 └── README.md
 ```
 
+The application is organized into Django apps based on domain responsibilities.
+
+Business logic is separated into service layers instead of placing complex operations directly inside views.
+
 ---
 
 ## Authentication Flow
 
 ```text
 Register
-  │
-  ▼
+   │
+   ▼
 Generate OTP
-  │
-  ▼
+   │
+   ▼
 Store OTP in Redis
-  │
-  ▼
+   │
+   ▼
 Send OTP with Resend
-  │
-  ▼
+   │
+   ▼
 Verify OTP
-  │
-  ▼
+   │
+   ▼
 Activate Account
-  │
-  ▼
+   │
+   ▼
 Login
-  │
-  ▼
-JWT Authentication
-  │
-  ▼
+   │
+   ▼
+Generate JWT Tokens
+   │
+   ▼
 Protected APIs
+```
+
+### Password Reset Flow
+
+```text
+Forgot Password
+      │
+      ▼
+Generate Reset Token
+      │
+      ▼
+Send Reset Email
+      │
+      ▼
+Validate Token
+      │
+      ▼
+Set New Password
 ```
 
 ---
@@ -229,26 +268,38 @@ Protected APIs
 
 ```text
 Search Trip
-  │
-  ▼
-View Seats
-  │
-  ▼
+    │
+    ▼
+View Trip
+    │
+    ▼
+Check Seat Availability
+    │
+    ▼
 Select Seats
-  │
-  ▼
+    │
+    ▼
 Validate Seats
-  │
-  ▼
+    │
+    ▼
 Create Booking
-  │
-  ▼
+    │
+    ▼
 Reserve Seats
-  │
-  ▼
-Payment
-  │
-  ▼
+    │
+    ▼
+Create Payment Intent
+    │
+    ▼
+Stripe Payment
+    │
+    ▼
+Stripe Webhook
+    │
+    ▼
+Update Payment Status
+    │
+    ▼
 Booking Confirmed
 ```
 
@@ -256,9 +307,15 @@ Booking Confirmed
 
 ## API Documentation
 
-Full API documentation is available in the [`docs/`](./docs) directory.
+Interactive API documentation is available through Swagger/OpenAPI.
 
-Documentation includes:
+### Swagger
+
+https://halt-api.onrender.com/api/docs/
+
+Documentation is also maintained in the [`docs/`](./docs) directory.
+
+The documentation covers:
 
 - Authentication
 - Cities
@@ -267,6 +324,7 @@ Documentation includes:
 - Buses
 - Trips
 - Bookings
+- Payments
 
 ---
 
@@ -301,6 +359,8 @@ FORGOT_TOKEN_TIMEOUT=900
 
 > Never commit `.env` or production secrets to Git.
 
+For production, use secure environment variables provided by the deployment platform.
+
 ---
 
 ## Installation
@@ -320,13 +380,13 @@ python -m venv .venv
 
 ### Activate Virtual Environment
 
-Linux / macOS:
+#### Linux / macOS
 
 ```bash
 source .venv/bin/activate
 ```
 
-Windows:
+#### Windows
 
 ```powershell
 .venv\Scripts\activate
@@ -338,9 +398,20 @@ Windows:
 pip install -r requirements.txt
 ```
 
+### Configure Environment Variables
+
+Create a `.env` file based on `.env.example`.
+
+```bash
+cp .env.example .env
+```
+
+Configure the required Django, PostgreSQL, Redis, Resend, and Stripe settings.
+
 ### Run Migrations
 
 ```bash
+cd src
 python manage.py migrate
 ```
 
@@ -348,6 +419,12 @@ python manage.py migrate
 
 ```bash
 python manage.py runserver
+```
+
+The development server will be available at:
+
+```text
+http://127.0.0.1:8000/
 ```
 
 ---
@@ -378,6 +455,8 @@ docker run --env-file .env -p 8000:8000 halt-api
 
 Gunicorn is used as the production application server.
 
+The container entrypoint handles the required application startup tasks before launching the production server.
+
 ---
 
 ## Testing
@@ -393,7 +472,39 @@ API testing can be performed using:
 Run Django tests with:
 
 ```bash
+cd src
 python manage.py test
+```
+
+The project also uses automated testing through GitHub Actions.
+
+---
+
+## CI/CD
+
+GitHub Actions is used for automated development workflows.
+
+The CI pipeline validates changes before deployment.
+
+Typical workflow:
+
+```text
+Git Push
+   │
+   ▼
+GitHub Actions
+   │
+   ▼
+Install Dependencies
+   │
+   ▼
+Run Tests
+   │
+   ▼
+Build / Validation
+   │
+   ▼
+Render Deployment
 ```
 
 ---
@@ -411,11 +522,14 @@ python manage.py test
 - [x] Ticket generation
 - [x] Gunicorn
 - [x] Docker configuration
+- [x] CI/CD
+- [x] Production deployment
+- [x] Trip search
+- [x] Seat availability
+- [x] Booking workflow
 - [ ] Pagination
 - [ ] Filtering
 - [ ] Notifications
-- [ ] CI/CD
-- [ ] Production deployment
 - [ ] Monitoring and logging
 
 ---
@@ -426,4 +540,12 @@ python manage.py test
 
 Software Engineer
 
-Backend-focused developer working with Python, Django, REST APIs, PostgreSQL, Redis, Docker, and cloud technologies.
+Backend-focused developer working with Python, Django, REST APIs, PostgreSQL, Redis, Docker, CI/CD, and cloud deployment.
+
+---
+
+<div align="center">
+
+**Built with Django & Django REST Framework**
+
+</div>

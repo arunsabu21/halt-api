@@ -34,6 +34,6 @@ if SENTRY_DSN:
             CeleryIntegration(),
         ],
         traces_sample_rate=0.1,
-        send_default_pil=False,
+        send_default_pii=False,
         environment="production",
     )

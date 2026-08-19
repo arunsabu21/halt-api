@@ -18,6 +18,7 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=github)
 ![Render](https://img.shields.io/badge/Render-Deployed-46E3B7?logo=render)
+![Sentry](https://img.shields.io/badge/Sentry-Error%20Monitoring-362D59?logo=sentry)
 
 </div>
 
@@ -39,6 +40,7 @@ Built with Django, Django REST Framework, PostgreSQL, Redis, Celery, Stripe, Res
 - [Docker](#docker)
 - [Testing](#testing)
 - [CI/CD](#cicd)
+- [Monitoring](#monitoring)
 - [Roadmap](#roadmap)
 - [Author](#author)
 
@@ -169,7 +171,9 @@ https://halt-api.onrender.com/api/docs/
 | Containerization  | Docker                |
 | CI/CD             | GitHub Actions        |
 | Deployment        | Render                |
+| Monitoring        | Sentry                |
 | API Testing       | Bruno / Postman       |
+
 
 ---
 
@@ -509,6 +513,22 @@ Render Deployment
 
 ---
 
+## Monitoring
+
+Halt uses **Sentry** for production error monitoring and application observability.
+
+Sentry captures unhandled application errors from the Django API and provides:
+
+- Production error tracking
+- Full exception stack traces
+- Request and transaction context
+- Environment information
+- Error frequency and event tracking
+- Django integration
+- Celery task error monitoring
+
+---
+
 ## Roadmap
 
 - [x] Authentication
@@ -527,10 +547,10 @@ Render Deployment
 - [x] Trip search
 - [x] Seat availability
 - [x] Booking workflow
+- [x] Sentry error monitoring
 - [ ] Pagination
 - [ ] Filtering
 - [ ] Notifications
-- [ ] Monitoring and logging
 
 ---
 

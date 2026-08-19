@@ -27,13 +27,9 @@ def api_status(request):
         "docs": "/api/docs/",
     })
 
-def sentry_test(request):
-    1 / 0
-
 urlpatterns = [
     path("", api_status),
     path('admin/', admin.site.urls),
-    path("sentry-test/", sentry_test),
 
     path("api/v1/", include([
     path("auth/", include("authentication.urls")),

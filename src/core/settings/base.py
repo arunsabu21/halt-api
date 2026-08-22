@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "bookings",
     "drf_spectacular",
     "corsheaders",
+    "django_celery_beat",
 ]
 
 AUTH_USER_MODEL = "authentication.User"
